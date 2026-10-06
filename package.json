@@ -1,0 +1,65 @@
+{
+  "name": "bigtable-desktop",
+  "productName": "Bigtable Desktop",
+  "version": "0.1.0",
+  "description": "Desktop client for querying and browsing Google Cloud Bigtable",
+  "author": "eveenendaal",
+  "homepage": "https://github.com/eveenendaal/bigtable-desktop",
+  "repository": "github:eveenendaal/bigtable-desktop",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "seed:emulator": "node scripts/seed-emulator.js",
+    "test": "node --test \"test/*.test.js\"",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac --arm64 --x64",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "@google-cloud/bigtable": "^7.3.0",
+    "@google-cloud/resource-manager": "^7.1.1"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.eveenendaal.bigtable-desktop",
+    "productName": "Bigtable Desktop",
+    "artifactName": "bigtable-desktop-${version}-${arch}.${ext}",
+    "npmRebuild": false,
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/node_modules/sse4_crc32/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "Bigtable Desktop ${version}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "maintainer": "eveenendaal"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "publish": null
+  }
+}
