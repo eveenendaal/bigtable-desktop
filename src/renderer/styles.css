@@ -1598,6 +1598,7 @@ body.sidebar-hidden .sidebar {
   color: var(--text-soft);
 }
 
+.connect-server,
 .connect-status {
   display: flex;
   flex-direction: column;
@@ -1608,10 +1609,30 @@ body.sidebar-hidden .sidebar {
   background: var(--bg-soft);
 }
 
+.connect-server {
+  margin-bottom: 10px;
+}
+
+.modal form.connect-row {
+  flex-direction: row;
+  gap: 10px;
+}
+
+.connect-server input {
+  width: 90px;
+}
+
 .connect-row {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.connect-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
 }
 
 .connect-result.ok {

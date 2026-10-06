@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   openExternal: (url) => call('shell:openExternal', url),
 
   mcpConfig: () => call('mcp:config'),
+  setMcpPort: (port) => call('mcp:setPort', port),
   installMcp: () => call('mcp:install'),
   saveResultSnapshot: (tabId, snapshot) => call('results:snapshot', tabId, snapshot),
 

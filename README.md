@@ -46,15 +46,17 @@ The cask installs the DMG from the latest GitHub release. The app is ad-hoc sign
 
 ## Use with Claude Code
 
-Bigtable Desktop includes an MCP server, so Claude Code can query Bigtable with the same credentials, projects and saved queries as the app. It is read-only.
+Bigtable Desktop includes an MCP server, so Claude Code can query Bigtable with the same credentials, projects and saved queries as the app. It is read-only, and it runs inside the app on `http://localhost:8487/mcp` for as long as the app is open.
 
-**From the app (easiest):** choose **File → Connect to Claude Code…** (or the plug button above the project list), then click **Add to Claude Code**. This runs `claude mcp add` for you at user scope, so the server is available in every project. The dialog also shows the command to run yourself, and a JSON configuration for other MCP clients.
+**From the app (easiest):** choose **File → Connect to Claude Code…** (or the plug button above the project list), then click **Add to Claude Code**. This runs `claude mcp add` for you at user scope, so the server is available in every project. The dialog also shows the command to run yourself, a JSON configuration for other MCP clients, and lets you change the port if 8487 is taken.
 
-**From a terminal**, with the app installed through Homebrew:
+**From a terminal:**
 
 ```sh
-claude mcp add bigtable-desktop --scope user -- bigtable-desktop-mcp
+claude mcp add --transport http --scope user bigtable-desktop http://localhost:8487/mcp
 ```
+
+The server only accepts connections from this computer, and refuses requests from web pages.
 
 Then run `/mcp` in Claude Code to check the connection, or just ask about your data.
 

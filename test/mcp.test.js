@@ -1,16 +1,18 @@
-// Spawns the stdio MCP server against a temporary workspace and drives it with
-// the official MCP client. Emulator-backed tests need BIGTABLE_EMULATOR_HOST.
+// Starts the localhost MCP server against a temporary workspace and drives it
+// with the official MCP client. Emulator-backed tests need BIGTABLE_EMULATOR_HOST.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { BigtableService } from '../src/main/bigtable.js';
+import { StateStore } from '../src/main/store.js';
+import { snapshotPath } from '../src/main/paths.js';
+import { createServer } from '../src/mcp/server.js';
+import { startHttpServer, rejectReason, MCP_PATH } from '../src/mcp/http.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const host = process.env.BIGTABLE_EMULATOR_HOST;
 const skip = !host && 'BIGTABLE_EMULATOR_HOST not set';
 const projectKey = `mcp-project@${host || 'localhost:1'}`;
@@ -19,6 +21,7 @@ const tableId = `mcp${Date.now()}`;
 
 let dir;
 let client;
+let http;
 
 const call = async (name, args = {}) => {
   const result = await client.callTool({ name, arguments: args });
@@ -70,23 +73,47 @@ before(async () => {
     }
   }
 
+  const store = new StateStore(path.join(dir, 'workspace.json'));
+  const loadSnapshot = (id) => {
+    try {
+      return JSON.parse(fs.readFileSync(snapshotPath(store.file, id), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  const service = new BigtableService();
+  http = await startHttpServer({ port: 0, createServer: () => createServer({ service, loadState: () => store.load({ backupCorrupt: false }), loadSnapshot }) });
   client = new Client({ name: 'test', version: '1.0.0' });
-  await client.connect(
-    new StdioClientTransport({
-      command: process.execPath,
-      args: [path.join(root, 'src/mcp/stdio.js')],
-      env: { ...process.env, BIGTABLE_DESKTOP_STATE: path.join(dir, 'workspace.json') },
-      stderr: 'ignore',
-    }),
-  );
+  await client.connect(new StreamableHTTPClientTransport(new URL(http.url)));
 });
 
 after(async () => {
   await client?.close();
+  await http?.close();
   if (host) {
     await new BigtableService().client({ projectId: 'mcp-project', emulatorHost: host }).instance(instanceId).table(tableId).delete();
   }
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('listens on localhost', () => {
+  assert.match(http.url, /^http:\/\/localhost:\d+\/mcp$/);
+});
+
+test('refuses requests from web pages', async () => {
+  assert.equal(rejectReason({ host: 'localhost:8487' }), null);
+  assert.equal(rejectReason({ host: '127.0.0.1:8487' }), null);
+  assert.equal(rejectReason({ host: '[::1]:8487' }), null);
+  assert.match(rejectReason({ host: 'evil.example:8487' }), /Host/);
+  assert.match(rejectReason({}), /Host/);
+  assert.match(rejectReason({ host: 'localhost:8487', origin: 'https://evil.example' }), /Browser/);
+
+  const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
+  const fromPage = await fetch(http.url, { method: 'POST', headers: { ...headers, Origin: 'https://evil.example' }, body });
+  assert.equal(fromPage.status, 403);
+  assert.equal((await fetch(http.url)).status, 405);
+  assert.equal((await fetch(http.url.replace(MCP_PATH, '/other'), { method: 'POST', headers, body })).status, 404);
 });
 
 test('advertises read-only tools', async () => {

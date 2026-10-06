@@ -7,7 +7,9 @@ import { BigtableService } from './bigtable.js';
 import { StateStore } from './store.js';
 import { describeError } from './errors.js';
 import { STATE_FILE, resultsDir, snapshotPath } from './paths.js';
-import { launchConfig, claudeAddCommand, mcpServersJson, shellEnv, findClaude, installInClaude } from './mcp-config.js';
+import { claudeAddCommand, mcpServersJson, shellEnv, findClaude, installInClaude } from './mcp-config.js';
+import { createServer as createMcpServer } from '../mcp/server.js';
+import { startHttpServer, mcpUrl, DEFAULT_MCP_PORT } from '../mcp/http.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.resolve(here, '..');
@@ -22,6 +24,9 @@ protocol.registerSchemesAsPrivileged([
 const service = new BigtableService();
 let store;
 let mainWindow;
+let mcpHttp = null;
+let mcpReady = Promise.resolve();
+let mcpStatus = { running: false, port: DEFAULT_MCP_PORT, url: mcpUrl(DEFAULT_MCP_PORT) };
 
 function serveAppProtocol() {
   const allowed = [path.join(srcRoot, 'renderer') + path.sep, path.join(srcRoot, 'shared') + path.sep];
@@ -76,18 +81,21 @@ function registerIpc() {
     return null;
   });
 
-  // MCP server: the app binary in Node mode runs src/mcp/stdio.js (inside app.asar when packaged).
-  const mcpLaunch = () => launchConfig({ execPath: process.execPath, scriptPath: path.join(srcRoot, 'mcp', 'stdio.js') });
   handle('mcp:config', async () => {
-    const config = mcpLaunch();
-    return {
-      config,
-      command: claudeAddCommand(config),
-      json: mcpServersJson(config),
-      claudePath: findClaude(await shellEnv()),
-    };
+    const claudePath = findClaude(await shellEnv());
+    await mcpReady;
+    return { ...mcpInfo(), claudePath };
   });
-  handle('mcp:install', () => installInClaude(mcpLaunch()));
+  handle('mcp:setPort', async (port) => {
+    if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Choose a port between 1024 and 65535.');
+    await mcpReady;
+    await (mcpReady = startMcp(port));
+    return mcpInfo();
+  });
+  handle('mcp:install', async () => {
+    await mcpReady;
+    return installInClaude(mcpStatus.url);
+  });
 
   // Result snapshots for "Copy MCP reference": the MCP server's get_query_results reads them.
   handle('results:snapshot', async (tabId, snapshot) => {
@@ -97,6 +105,38 @@ function registerIpc() {
     await fs.rename(`${file}.tmp`, file);
     return file;
   });
+}
+
+function loadSnapshot(tabId) {
+  try {
+    return JSON.parse(fsSync.readFileSync(snapshotPath(store.file, tabId), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * (Re)starts the MCP server on localhost. It runs in this process for as long as
+ * the app does, and reads the workspace on every call so it sees the latest tabs.
+ */
+async function startMcp(port) {
+  await mcpHttp?.close();
+  mcpHttp = null;
+  try {
+    mcpHttp = await startHttpServer({
+      port,
+      createServer: () => createMcpServer({ service, loadState: () => store.load({ backupCorrupt: false }), loadSnapshot }),
+    });
+    mcpStatus = { running: true, port: mcpHttp.port, url: mcpHttp.url };
+  } catch (err) {
+    const error = err.code === 'EADDRINUSE' ? `Port ${port} is already in use. Choose another port.` : err.message;
+    mcpStatus = { running: false, port, url: mcpUrl(port), error };
+  }
+  return mcpStatus;
+}
+
+function mcpInfo() {
+  return { ...mcpStatus, command: claudeAddCommand(mcpStatus.url), json: mcpServersJson(mcpStatus.url) };
 }
 
 /** Deletes result snapshots whose tab no longer exists. */
@@ -202,6 +242,7 @@ app.whenReady().then(() => {
   if (isMac && !app.isPackaged) app.dock.setIcon(path.join(srcRoot, '..', 'build', 'icon.png'));
   store = new StateStore(process.env.BIGTABLE_DESKTOP_STATE || path.join(app.getPath('userData'), STATE_FILE));
   pruneSnapshots();
+  mcpReady = startMcp(Number(process.env.BIGTABLE_DESKTOP_MCP_PORT) || store.load().settings.mcpPort || DEFAULT_MCP_PORT);
   serveAppProtocol();
   registerIpc();
   buildMenu();

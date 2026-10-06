@@ -45,13 +45,7 @@
       ],
       "identity": "-",
       "hardenedRuntime": false,
-      "icon": "build/icon.icns",
-      "extraResources": [
-        {
-          "from": "bin/bigtable-desktop-mcp",
-          "to": "bin/bigtable-desktop-mcp"
-        }
-      ]
+      "icon": "build/icon.icns"
     },
     "dmg": {
       "title": "Bigtable Desktop ${version}"

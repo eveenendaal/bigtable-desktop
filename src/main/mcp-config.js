@@ -1,4 +1,4 @@
-// How MCP clients launch Bigtable Desktop's MCP server, and how the app registers
+// How MCP clients reach Bigtable Desktop's MCP server, and how the app registers
 // it with the Claude Code CLI. No Electron imports, so it can be unit tested.
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
@@ -7,18 +7,9 @@ import path from 'node:path';
 
 export const MCP_SERVER_NAME = 'bigtable-desktop';
 
-/**
- * The stdio launch command: the app's own binary in Node mode running src/mcp/stdio.js.
- * @param {{execPath: string, scriptPath: string}} paths
- */
-export function launchConfig({ execPath, scriptPath }) {
-  return { command: execPath, args: [scriptPath], env: { ELECTRON_RUN_AS_NODE: '1' } };
-}
-
 /** Arguments for `claude mcp add`, registering the server for every project (user scope). */
-export function claudeAddArgs(config) {
-  const env = Object.entries(config.env).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
-  return ['mcp', 'add', MCP_SERVER_NAME, '--scope', 'user', ...env, '--', config.command, ...config.args];
+export function claudeAddArgs(url) {
+  return ['mcp', 'add', '--transport', 'http', '--scope', 'user', MCP_SERVER_NAME, url];
 }
 
 export function shellQuote(arg) {
@@ -26,13 +17,13 @@ export function shellQuote(arg) {
 }
 
 /** The `claude mcp add` command as one copy-pasteable line. */
-export function claudeAddCommand(config) {
-  return ['claude', ...claudeAddArgs(config)].map(shellQuote).join(' ');
+export function claudeAddCommand(url) {
+  return ['claude', ...claudeAddArgs(url)].map(shellQuote).join(' ');
 }
 
-/** `mcpServers` JSON for clients configured with a file (Claude Desktop, .mcp.json, ...). */
-export function mcpServersJson(config) {
-  return JSON.stringify({ mcpServers: { [MCP_SERVER_NAME]: { type: 'stdio', ...config } } }, null, 2);
+/** `mcpServers` JSON for clients configured with a file (.mcp.json, ...). */
+export function mcpServersJson(url) {
+  return JSON.stringify({ mcpServers: { [MCP_SERVER_NAME]: { type: 'http', url } } }, null, 2);
 }
 
 const run = (file, args, options = {}) =>
@@ -75,13 +66,14 @@ export function findClaude(env, home = os.homedir()) {
 }
 
 /** Registers (or re-registers) the server with Claude Code at user scope. */
-export async function installInClaude(config) {
+export async function installInClaude(url) {
   const env = await shellEnv();
   const claude = findClaude(env);
   if (!claude) return { ok: false, message: 'The Claude Code CLI (claude) was not found. Install Claude Code, or run the command shown below.' };
-  // Remove any previous registration first so paths stay current after the app moves or updates.
+  // Remove any previous registration first, so the URL stays current after a port change
+  // and older stdio registrations are replaced.
   await run(claude, ['mcp', 'remove', MCP_SERVER_NAME, '--scope', 'user'], { env });
-  const added = await run(claude, claudeAddArgs(config), { env });
+  const added = await run(claude, claudeAddArgs(url), { env });
   return {
     ok: added.ok,
     claude,

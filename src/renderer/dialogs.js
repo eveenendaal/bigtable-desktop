@@ -1,5 +1,6 @@
 // Modal dialogs built on <dialog>.
 import { h, clear, formatError, icon, toast } from './dom.js';
+import { workspace, persist } from './state.js';
 
 function openDialog(build) {
   return new Promise((resolve) => {
@@ -160,10 +161,11 @@ function copyBlock(text, label) {
   );
 }
 
-/** Explains the built-in MCP server and registers it with Claude Code. */
+/** Shows where the built-in MCP server is listening and registers it with Claude Code. */
 export function connectClaudeDialog() {
   return openDialog((dialog, done) => {
     dialog.classList.add('wide');
+    const server = h('div', { class: 'connect-server muted' }, h('span', { class: 'spinner' }), ' Starting the MCP server…');
     const status = h('div', { class: 'connect-status muted' }, h('span', { class: 'spinner' }), ' Looking for Claude Code…');
     const commandSlot = h('div', {});
     const jsonSlot = h('div', {});
@@ -173,7 +175,7 @@ export function connectClaudeDialog() {
       h(
         'p',
         { class: 'muted' },
-        'Bigtable Desktop includes an MCP server that gives Claude Code read-only access to your Bigtable data. It uses the same Google credentials, projects and saved queries as the app.',
+        'While Bigtable Desktop is open, it runs an MCP server on localhost that gives Claude Code read-only access to your Bigtable data. It uses the same Google credentials, projects and saved queries as the app.',
       ),
       h(
         'ul',
@@ -182,6 +184,7 @@ export function connectClaudeDialog() {
         h('li', {}, 'Read rows and full cell history, with JSON values and timestamps'),
         h('li', {}, 'Run GoogleSQL, and run the queries saved in your tabs'),
       ),
+      server,
       status,
       h('h3', {}, 'Or run this in a terminal'),
       commandSlot,
@@ -189,11 +192,52 @@ export function connectClaudeDialog() {
       h('div', { class: 'dialog-actions' }, h('button', { type: 'button', class: 'btn', onClick: () => done(null) }, 'Done')),
     );
 
+    const showServer = (info) => {
+      clear(server);
+      clear(commandSlot);
+      clear(jsonSlot);
+      commandSlot.append(copyBlock(info.command, 'Command'));
+      jsonSlot.append(copyBlock(info.json, 'Configuration'));
+      server.classList.remove('muted');
+      const port = h('input', { type: 'number', min: 1024, max: 65535, required: true, value: info.port });
+      const apply = h('button', { type: 'submit', class: 'btn small' }, 'Change port');
+      const form = h(
+        'form',
+        {
+          class: 'connect-row',
+          onSubmit: async (event) => {
+            event.preventDefault();
+            apply.disabled = true;
+            try {
+              const next = await window.api.setMcpPort(Number(port.value));
+              showServer(next);
+              if (next.running) {
+                workspace.settings.mcpPort = next.port;
+                persist();
+                toast('MCP server restarted. Add it to Claude Code again to use the new port.');
+              }
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+              apply.disabled = false;
+            }
+          },
+        },
+        h('span', { class: 'muted' }, 'Port'),
+        port,
+        apply,
+      );
+      server.append(
+        info.running
+          ? h('div', { class: 'connect-row' }, h('span', { class: 'connect-dot' }), h('span', {}, 'Running at ', h('span', { class: 'mono' }, info.url)))
+          : h('div', { class: 'connect-result error' }, `The MCP server is not running. ${info.error || ''}`),
+        form,
+      );
+    };
+
     window.api
       .mcpConfig()
       .then((info) => {
-        commandSlot.append(copyBlock(info.command, 'Command'));
-        jsonSlot.append(copyBlock(info.json, 'Configuration'));
+        showServer(info);
         clear(status);
         if (!info.claudePath) {
           status.append('The Claude Code CLI was not found on this computer. Install Claude Code, then run the command below.');
@@ -224,6 +268,7 @@ export function connectClaudeDialog() {
         );
       })
       .catch((err) => {
+        clear(server);
         clear(status);
         status.append(formatError(err));
       });

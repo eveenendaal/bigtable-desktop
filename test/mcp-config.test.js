@@ -3,45 +3,27 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { launchConfig, claudeAddArgs, claudeAddCommand, mcpServersJson, shellQuote, findClaude } from '../src/main/mcp-config.js';
-import { appDataDir, defaultStatePath } from '../src/main/paths.js';
+import { claudeAddArgs, claudeAddCommand, mcpServersJson, shellQuote, findClaude } from '../src/main/mcp-config.js';
+import { mcpUrl } from '../src/mcp/http.js';
 
-const config = launchConfig({
-  execPath: '/Applications/Bigtable Desktop.app/Contents/MacOS/Bigtable Desktop',
-  scriptPath: '/Applications/Bigtable Desktop.app/Contents/Resources/app.asar/src/mcp/stdio.js',
+const url = mcpUrl(8487);
+
+test('mcpUrl points at localhost', () => {
+  assert.equal(url, 'http://localhost:8487/mcp');
 });
 
-test('launchConfig runs the app binary in Node mode', () => {
-  assert.equal(config.env.ELECTRON_RUN_AS_NODE, '1');
-  assert.equal(config.args.length, 1);
+test('claudeAddArgs registers the HTTP server at user scope', () => {
+  assert.deepEqual(claudeAddArgs(url), ['mcp', 'add', '--transport', 'http', '--scope', 'user', 'bigtable-desktop', url]);
 });
 
-test('claudeAddArgs registers the server at user scope', () => {
-  assert.deepEqual(claudeAddArgs(config), [
-    'mcp',
-    'add',
-    'bigtable-desktop',
-    '--scope',
-    'user',
-    '-e',
-    'ELECTRON_RUN_AS_NODE=1',
-    '--',
-    config.command,
-    config.args[0],
-  ]);
-});
-
-test('claudeAddCommand quotes paths with spaces', () => {
-  assert.equal(
-    claudeAddCommand(config),
-    "claude mcp add bigtable-desktop --scope user -e ELECTRON_RUN_AS_NODE=1 -- '/Applications/Bigtable Desktop.app/Contents/MacOS/Bigtable Desktop' '/Applications/Bigtable Desktop.app/Contents/Resources/app.asar/src/mcp/stdio.js'",
-  );
+test('claudeAddCommand is one copy-pasteable line', () => {
+  assert.equal(claudeAddCommand(url), 'claude mcp add --transport http --scope user bigtable-desktop http://localhost:8487/mcp');
   assert.equal(shellQuote("it's"), `'it'\\''s'`);
 });
 
-test('mcpServersJson produces a stdio server entry', () => {
-  const parsed = JSON.parse(mcpServersJson(config));
-  assert.deepEqual(parsed.mcpServers['bigtable-desktop'], { type: 'stdio', ...config });
+test('mcpServersJson produces an http server entry', () => {
+  const parsed = JSON.parse(mcpServersJson(url));
+  assert.deepEqual(parsed.mcpServers['bigtable-desktop'], { type: 'http', url });
 });
 
 test('findClaude searches PATH and the default install locations', () => {
@@ -55,11 +37,4 @@ test('findClaude searches PATH and the default install locations', () => {
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }
-});
-
-test('workspace path matches Electron userData', () => {
-  assert.equal(appDataDir('darwin', {}, '/Users/me'), '/Users/me/Library/Application Support');
-  assert.equal(appDataDir('linux', {}, '/home/me'), '/home/me/.config');
-  assert.equal(appDataDir('linux', { XDG_CONFIG_HOME: '/x' }, '/home/me'), '/x');
-  assert.equal(defaultStatePath({ BIGTABLE_DESKTOP_STATE: '/tmp/w.json' }), '/tmp/w.json');
 });

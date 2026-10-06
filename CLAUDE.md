@@ -38,12 +38,12 @@ Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or 
   - `grid.js`: the results grid.
   - `inspector.js`: the cell/row inspector, version timeline and diff.
   - `json-view.js`: JSON highlighting and the collapsible tree.
-- `src/mcp/`: the built-in MCP server (official `@modelcontextprotocol/sdk`, stdio).
+- `src/mcp/`: the built-in MCP server (official `@modelcontextprotocol/sdk`, Streamable HTTP).
   - `server.js`: `createServer({service, loadState, loadSnapshot})` registers the read-only tools. It reuses `BigtableService` and the shared export and query code.
-  - `stdio.js`: the entry point. MCP clients run the app binary with `ELECTRON_RUN_AS_NODE=1` and this file (inside `app.asar` when packaged). `bin/bigtable-desktop-mcp` does the same for Homebrew users. Keep stdout clean: it carries the protocol.
+  - `http.js`: serves it from the main process on `http://localhost:<port>/mcp` (default 8487, `settings.mcpPort`, or `BIGTABLE_DESKTOP_MCP_PORT`). It listens on 127.0.0.1 and ::1 only, is stateless (a fresh server per POST), and rejects non-loopback `Host` headers and any `Origin` header so web pages can't reach it.
   - The server reads the workspace file on every call. It also reads result snapshots from `results/<tabId>.json` next to that file. Those snapshots are written by the renderer's *Copy MCP reference* through the `results:snapshot` IPC, and pruned at startup for closed tabs.
-  - `src/main/mcp-config.js` builds the launch config and the `claude mcp add` command, and registers the server with the Claude Code CLI. It resolves PATH through the login shell, because GUI apps on macOS don't inherit it.
-  - `src/main/paths.js` computes the workspace path without Electron. `APP_NAME` must match `productName`.
+  - `src/main/mcp-config.js` builds the `claude mcp add --transport http` command and JSON config, and registers the server with the Claude Code CLI. It resolves PATH through the login shell, because GUI apps on macOS don't inherit it.
+  - `src/main/paths.js`: the workspace file name and snapshot paths.
 - `src/shared/`: code used by both processes. It must only use web-standard APIs (`Uint8Array`, `TextDecoder`, `btoa`), never Node's `Buffer`.
   - `bytes.js`: byte helpers.
   - `cells.js`: JSON, text and binary detection.
@@ -73,7 +73,6 @@ Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or 
 - The app icon's source is `build/icon.svg`. `build/icon.png`, `build/icon.icns` and `src/renderer/assets/icon.svg` are generated from it with `make icons`, so edit the SVG and regenerate rather than editing those files.
 - Pagination ("Load more") restarts strictly after `lastKey`. Prefix scans are turned into ranges using `prefixSuccessor`.
 
-- The MCP server depends on Electron's `RunAsNode` fuse staying enabled (the default). Don't disable it in electron-builder's `electronFuses`.
 - MCP tools must stay read-only and declare `readOnlyHint: true`.
 
 ## Conventions
@@ -87,5 +86,5 @@ Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or 
 - The repo is also a Homebrew tap (`Casks/bigtable-desktop.rb`).
 - Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`. So does running it manually (`workflow_dispatch`), which releases the `package.json` version and creates its tag. It builds the installers, publishes a GitHub release, then runs `scripts/update-cask.js` to commit the new version and checksums to the cask on the default branch.
 - Don't hand-edit the cask's version or sha256 values.
-- `uninstall quit:` makes `brew upgrade` quit the app and reopen it afterwards. The cask's `binary` stanza needs `bin/bigtable-desktop-mcp`, which is bundled through `mac.extraResources`.
+- `uninstall quit:` makes `brew upgrade` quit the app and reopen it afterwards.
 - Artifact names must stay `bigtable-desktop-${version}-${arch}.dmg` to match the cask URL.
