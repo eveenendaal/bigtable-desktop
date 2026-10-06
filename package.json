@@ -1,7 +1,7 @@
 {
   "name": "bigtable-desktop",
   "productName": "Bigtable Desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Desktop client for querying and browsing Google Cloud Bigtable",
   "author": "eveenendaal",
   "homepage": "https://github.com/eveenendaal/bigtable-desktop",
