@@ -1,16 +1,34 @@
 name: Release
 
-# Push a tag like v0.2.0 to build installers, publish a GitHub release and
-# update the Homebrew cask in Casks/bigtable-desktop.rb.
+# Push a tag like v0.2.0 (or run this workflow manually, which releases the
+# version in package.json and creates its tag) to build installers, publish a
+# GitHub release and update the Homebrew cask in Casks/bigtable-desktop.rb.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        name: Resolve release tag
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +49,9 @@ jobs:
       - run: npm ci
       - name: Set version from tag
         shell: bash
-        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: npm version "${TAG#v}" --no-git-tag-version --allow-same-version
       - run: npm test
       - name: Build
         run: npx electron-builder ${{ matrix.target }} --publish never
@@ -49,7 +69,7 @@ jobs:
             dist/*.exe
 
   release:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -59,11 +79,13 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: dist/*
           generate_release_notes: true
 
   update-cask:
-    needs: release
+    needs: [prepare, release]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,15 +99,19 @@ jobs:
           name: dist-macos-14
           path: dist
       - name: Update cask version and checksums
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${TAG#v}"
           node scripts/update-cask.js "$VERSION" \
             "dist/bigtable-desktop-$VERSION-arm64.dmg" \
             "dist/bigtable-desktop-$VERSION-x64.dmg"
       - name: Commit cask
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Casks/bigtable-desktop.rb
-          git commit -m "Update Homebrew cask to ${GITHUB_REF_NAME}" || exit 0
+          git commit -m "Update Homebrew cask to ${TAG}" || exit 0
           git push

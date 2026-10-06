@@ -110,12 +110,15 @@ The workspace is saved to `workspace.json` in the app's user-data directory (`~/
 
 ## Releasing
 
-1. Push a version tag:
+1. Start a release in one of two ways:
+   - push a version tag:
 
-   ```sh
-   git tag v0.2.0
-   git push origin v0.2.0
-   ```
+     ```sh
+     git tag v0.2.0
+     git push origin v0.2.0
+     ```
+
+   - or bump `version` in `package.json`, then run the **Release** workflow manually from the Actions tab. It creates the `v<version>` tag itself.
 
 2. The **Release** workflow then:
    - builds macOS (arm64 and x64 DMG/ZIP), Linux (AppImage/deb) and Windows (NSIS) installers;

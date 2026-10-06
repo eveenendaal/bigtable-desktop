@@ -72,6 +72,6 @@ Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or 
 ## Release and Homebrew
 
 - The repo is also a Homebrew tap (`Casks/bigtable-desktop.rb`).
-- Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`. It builds the installers, publishes a GitHub release, then runs `scripts/update-cask.js` to commit the new version and checksums to the cask on the default branch.
+- Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`. So does running it manually (`workflow_dispatch`), which releases the `package.json` version and creates its tag. It builds the installers, publishes a GitHub release, then runs `scripts/update-cask.js` to commit the new version and checksums to the cask on the default branch.
 - Don't hand-edit the cask's version or sha256 values.
 - Artifact names must stay `bigtable-desktop-${version}-${arch}.dmg` to match the cask URL.
