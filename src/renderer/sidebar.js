@@ -1,6 +1,6 @@
 // Project / instance / cluster / table explorer.
 import { h, icon, iconButton, replaceChildren, toast } from './dom.js';
-import { formDialog, confirmDialog, discoverProjectsDialog } from './dialogs.js';
+import { formDialog, confirmDialog, discoverProjectsDialog, connectClaudeDialog } from './dialogs.js';
 import {
   workspace,
   persist,
@@ -51,6 +51,7 @@ export function initSidebar(container, options) {
       'div',
       { class: 'sidebar-header' },
       h('div', { class: 'sidebar-title' }, 'Projects'),
+      iconButton('plug', 'Connect to Claude Code', () => connectClaudeDialog()),
       iconButton('search', 'Discover projects', () => discoverProjects()),
       iconButton('plus', 'Add project by ID', () => promptAddProject()),
     ),

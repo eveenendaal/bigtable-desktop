@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('api', {
   copyText: (text) => call('clipboard:write', text),
   openExternal: (url) => call('shell:openExternal', url),
 
+  mcpConfig: () => call('mcp:config'),
+  installMcp: () => call('mcp:install'),
+  saveResultSnapshot: (tabId, snapshot) => call('results:snapshot', tabId, snapshot),
+
   onCommand: (listener) => {
     const wrapped = (_event, command) => listener(command);
     ipcRenderer.on('menu:command', wrapped);

@@ -28,6 +28,8 @@ A desktop app for **reading and exploring Google Cloud Bigtable data**. It is bu
 - **Export**
   - Export results as JSON (all versions with timestamps, or latest values only), NDJSON, or CSV (latest values, optionally with timestamps), or copy them to the clipboard.
   - Export a single cell with its full history, or a whole row.
+  - *Copy MCP reference* copies a short reference to the query and the results you're looking at, to paste into Claude Code.
+- **Built-in MCP server** gives Claude Code (or any MCP client) read-only access to the same data. See [Use with Claude Code](#use-with-claude-code).
 
 ## Install with Homebrew (macOS)
 
@@ -39,6 +41,44 @@ brew install --cask bigtable-desktop
 ```
 
 The cask installs the DMG from the latest GitHub release. The app is ad-hoc signed but not notarized, so the cask removes the quarantine flag after installing.
+
+`brew upgrade` quits Bigtable Desktop if it is running and reopens it once the new version is installed.
+
+## Use with Claude Code
+
+Bigtable Desktop includes an MCP server, so Claude Code can query Bigtable with the same credentials, projects and saved queries as the app. It is read-only.
+
+**From the app (easiest):** choose **File → Connect to Claude Code…** (or the plug button above the project list), then click **Add to Claude Code**. This runs `claude mcp add` for you at user scope, so the server is available in every project. The dialog also shows the command to run yourself, and a JSON configuration for other MCP clients.
+
+**From a terminal**, with the app installed through Homebrew:
+
+```sh
+claude mcp add bigtable-desktop --scope user -- bigtable-desktop-mcp
+```
+
+Then run `/mcp` in Claude Code to check the connection, or just ask about your data.
+
+| Tool | What it does |
+| --- | --- |
+| `list_projects` | Projects configured in the app (with known instances and tables); `discover: true` also lists every project you can see |
+| `list_instances`, `list_clusters`, `list_tables`, `list_column_families` | Discovery |
+| `read_rows` | Rows by prefix, range or exact keys, with family, qualifier, value and time filters; pages with `start_after` |
+| `read_cell_history` | Every version of one cell, newest first |
+| `execute_sql` | GoogleSQL for Bigtable |
+| `list_saved_queries`, `run_saved_query` | The query tabs open in the app |
+| `get_query_results` | The results you were looking at when you used *Copy MCP reference* |
+
+JSON values come back parsed, and every version has an ISO-8601 timestamp with microsecond precision.
+
+**Point Claude at a query:** in a query tab, choose **Export → Copy MCP reference** and paste it into Claude Code. The app saves a snapshot of the rows on screen, including pages loaded with *Load more* and any full history you loaded. The reference tells Claude how to fetch that snapshot and how to re-run the query:
+
+```
+Bigtable Desktop query "users" (via the bigtable-desktop MCP server):
+- Results I'm looking at: get_query_results {"id":"tab-muwd2ygr-0"} (60 rows, captured 2026-10-06T07:32:52.179Z)
+- Re-run it: run_saved_query {"id":"tab-muwd2ygr-0"}
+- Table: demo-project@localhost:8086 / demo-instance / users
+- Query: prefix "user#00" · 5 versions per cell · limit 100
+```
 
 ## Authentication
 

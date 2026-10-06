@@ -3,7 +3,7 @@ import { h, icon, iconButton, replaceChildren, toast, popupMenu } from './dom.js
 import { workspace, loadWorkspace, persist, createTab, tabTitle, activeTab, findProject, addProject, defaultSql } from './state.js';
 import { initSidebar, renderTree, promptAddProject, discoverProjects, updateTimeZoneToggle, revealTable } from './sidebar.js';
 import { QueryView } from './query-view.js';
-import { formDialog } from './dialogs.js';
+import { formDialog, connectClaudeDialog } from './dialogs.js';
 
 const views = new Map();
 let tabbarEl;
@@ -259,6 +259,8 @@ function runCommand(command) {
       return promptAddProject();
     case 'discover-projects':
       return discoverProjects();
+    case 'connect-claude':
+      return connectClaudeDialog();
     default:
       return undefined;
   }

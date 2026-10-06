@@ -1,8 +1,8 @@
 // One query tab: query editor, results grid and inspector.
 import { h, icon, iconButton, replaceChildren, toast, popupMenu, formatError } from './dom.js';
-import { parseKeyInput } from '../shared/bytes.js';
-import { toJSON, toNDJSON, toCSV } from '../shared/export.js';
-import { workspace, persist, findProject, connFor, defaultSql } from './state.js';
+import { rowsRequestFromForm, describeSavedQuery, mcpReferenceText } from '../shared/query.js';
+import { toJSON, toNDJSON, toCSV, rowToPlain } from '../shared/export.js';
+import { workspace, persist, flush, findProject, connFor, defaultSql } from './state.js';
 import { ResultsGrid, collectColumns } from './grid.js';
 import { Inspector } from './inspector.js';
 
@@ -374,28 +374,6 @@ export class QueryView {
   // Running queries
   // -------------------------------------------------------------------------
 
-  buildRowsQuery() {
-    const q = this.tab.query;
-    return {
-      keyMode: q.keyMode,
-      prefix: parseKeyInput(q.prefix || ''),
-      start: parseKeyInput(q.start || ''),
-      end: parseKeyInput(q.end || ''),
-      keys: (q.keys || '')
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map(parseKeyInput),
-      families: q.families,
-      qualifierRegex: q.qualifierRegex,
-      valueRegex: q.valueRegex,
-      versions: q.versions === '' ? null : q.versions,
-      timeStart: q.timeStart ? new Date(q.timeStart).toISOString() : null,
-      timeEnd: q.timeEnd ? new Date(q.timeEnd).toISOString() : null,
-      limit: q.limit || 100,
-    };
-  }
-
   async run({ more = false } = {}) {
     const { tab } = this;
     if (!tab.tableId || this.running) return;
@@ -415,7 +393,7 @@ export class QueryView {
           queryId,
           instanceId: tab.instanceId,
           tableId: tab.tableId,
-          query: this.buildRowsQuery(),
+          query: rowsRequestFromForm(this.tab.query),
           afterKey: more ? this.result?.lastKey : null,
         });
       }
@@ -552,6 +530,7 @@ export class QueryView {
       { label: 'CSV — latest values + timestamps', onClick: () => this.export('csv-ts') },
       'separator',
       { label: 'Copy as JSON', hint: 'clipboard', onClick: () => this.export('copy') },
+      { label: 'Copy MCP reference', hint: 'for Claude Code', onClick: () => this.copyMcpReference() },
     ]);
   }
 
@@ -580,6 +559,29 @@ export class QueryView {
         return toast(`Copied ${result.rows.length} rows as JSON`);
       default:
         return undefined;
+    }
+  }
+
+  /**
+   * Snapshots the current results for the MCP server's get_query_results tool and
+   * copies a reference that points Claude Code at this query and its results.
+   */
+  async copyMcpReference() {
+    const { tab, result } = this;
+    try {
+      await flush(); // the MCP server reads the saved query from the workspace file
+      const snapshot = {
+        ...describeSavedQuery(tab),
+        capturedAt: new Date().toISOString(),
+        rowCount: result.rows.length,
+        hasMore: Boolean(result.hasMore),
+        rows: result.rows.map((row) => rowToPlain(row)),
+      };
+      await window.api.saveResultSnapshot(tab.id, snapshot);
+      await window.api.copyText(mcpReferenceText(tab, snapshot));
+      toast('MCP reference copied. Paste it into Claude Code.');
+    } catch (err) {
+      toast(`Could not copy the MCP reference: ${err.message}`, { kind: 'error' });
     }
   }
 

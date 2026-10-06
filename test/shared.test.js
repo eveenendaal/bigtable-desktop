@@ -5,6 +5,7 @@ import { describeValue, previewValue, valueToPlain, columnId } from '../src/shar
 import { formatTimestamp, microsToIso, formatDuration, formatRelative, toMicros } from '../src/shared/time.js';
 import { diffLines, diffStats } from '../src/shared/diff.js';
 import { toJSON, toCSV, toNDJSON, cellToJSON } from '../src/shared/export.js';
+import { describeSavedQuery, mcpReferenceText, rowsRequestFromForm } from '../src/shared/query.js';
 
 test('displayBytes keeps printable text and escapes binary', () => {
   assert.equal(displayBytes(utf8Encode('user#1')), 'user#1');
@@ -141,4 +142,42 @@ test('cellToJSON includes the full history', () => {
   const parsed = JSON.parse(cellToJSON(result.rows[0].key, result.rows[0].cells[0]));
   assert.equal(parsed.column, 'cf:doc');
   assert.equal(parsed.versions.length, 2);
+});
+
+const rowsTab = {
+  id: 'tab-1',
+  tableId: 'users',
+  projectKey: 'p',
+  instanceId: 'i',
+  mode: 'rows',
+  query: { keyMode: 'prefix', prefix: 'user#', families: ['profile'], versions: 5, limit: 100, keys: '', start: '', end: '' },
+};
+
+test('describeSavedQuery summarizes a Rows tab', () => {
+  assert.deepEqual(describeSavedQuery(rowsTab), {
+    id: 'tab-1',
+    title: 'users',
+    project: 'p',
+    instance: 'i',
+    table: 'users',
+    mode: 'rows',
+    query: { prefix: 'user#', families: ['profile'], versions: 5, limit: 100 },
+  });
+});
+
+test('mcpReferenceText points at the snapshot and the saved query', () => {
+  const text = mcpReferenceText(rowsTab, { rowCount: 60, capturedAt: '2026-10-06T07:31:02.000Z' });
+  assert.match(text, /get_query_results \{"id":"tab-1"\} \(60 rows, captured 2026-10-06T07:31:02.000Z\)/);
+  assert.match(text, /run_saved_query \{"id":"tab-1"\}/);
+  assert.match(text, /Query: prefix "user#" · families profile · 5 versions per cell · limit 100/);
+  const sql = mcpReferenceText({ ...rowsTab, mode: 'sql', sql: 'SELECT 1' }, null);
+  assert.doesNotMatch(sql, /get_query_results/);
+  assert.match(sql, /```sql\nSELECT 1\n```/);
+});
+
+test('rowsRequestFromForm parses keys and escapes', () => {
+  const req = rowsRequestFromForm({ keyMode: 'keys', keys: 'a\n\\x00b\n', versions: '', limit: 0 });
+  assert.deepEqual(req.keys.map((k) => [...k]), [[0x61], [0x00, 0x62]]);
+  assert.equal(req.versions, null);
+  assert.equal(req.limit, 100);
 });

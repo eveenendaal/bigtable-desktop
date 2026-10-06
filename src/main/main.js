@@ -1,10 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, protocol, net, shell, clipboard } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { BigtableService } from './bigtable.js';
 import { StateStore } from './store.js';
 import { describeError } from './errors.js';
+import { STATE_FILE, resultsDir, snapshotPath } from './paths.js';
+import { launchConfig, claudeAddCommand, mcpServersJson, shellEnv, findClaude, installInClaude } from './mcp-config.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.resolve(here, '..');
@@ -72,6 +75,43 @@ function registerIpc() {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
     return null;
   });
+
+  // MCP server: the app binary in Node mode runs src/mcp/stdio.js (inside app.asar when packaged).
+  const mcpLaunch = () => launchConfig({ execPath: process.execPath, scriptPath: path.join(srcRoot, 'mcp', 'stdio.js') });
+  handle('mcp:config', async () => {
+    const config = mcpLaunch();
+    return {
+      config,
+      command: claudeAddCommand(config),
+      json: mcpServersJson(config),
+      claudePath: findClaude(await shellEnv()),
+    };
+  });
+  handle('mcp:install', () => installInClaude(mcpLaunch()));
+
+  // Result snapshots for "Copy MCP reference": the MCP server's get_query_results reads them.
+  handle('results:snapshot', async (tabId, snapshot) => {
+    const file = snapshotPath(store.file, tabId);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(`${file}.tmp`, JSON.stringify(snapshot));
+    await fs.rename(`${file}.tmp`, file);
+    return file;
+  });
+}
+
+/** Deletes result snapshots whose tab no longer exists. */
+function pruneSnapshots() {
+  const dir = resultsDir(store.file);
+  const tabIds = new Set((store.load().tabs || []).map((t) => t.id));
+  let files = [];
+  try {
+    files = fsSync.readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const name of files) {
+    if (name.endsWith('.json') && !tabIds.has(name.slice(0, -5))) fsSync.rmSync(path.join(dir, name), { force: true });
+  }
 }
 
 function sendCommand(command) {
@@ -92,6 +132,8 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Add Project…', click: () => sendCommand('add-project') },
         { label: 'Discover Projects…', click: () => sendCommand('discover-projects') },
+        { type: 'separator' },
+        { label: 'Connect to Claude Code…', click: () => sendCommand('connect-claude') },
         ...(isMac ? [] : [{ type: 'separator' }, { role: 'quit' }]),
       ],
     },
@@ -158,7 +200,8 @@ function createWindow() {
 app.whenReady().then(() => {
   // Packaged builds get their icon from the bundle; show it in the Dock during development too.
   if (isMac && !app.isPackaged) app.dock.setIcon(path.join(srcRoot, '..', 'build', 'icon.png'));
-  store = new StateStore(process.env.BIGTABLE_DESKTOP_STATE || path.join(app.getPath('userData'), 'workspace.json'));
+  store = new StateStore(process.env.BIGTABLE_DESKTOP_STATE || path.join(app.getPath('userData'), STATE_FILE));
+  pruneSnapshots();
   serveAppProtocol();
   registerIpc();
   buildMenu();

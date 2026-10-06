@@ -1,0 +1,22 @@
+#!/bin/sh
+# Starts the Bigtable Desktop MCP server on stdio, e.g.
+#   claude mcp add bigtable-desktop --scope user -- bigtable-desktop-mcp
+# Shipped in "Bigtable Desktop.app/Contents/Resources/bin" and linked onto PATH
+# by the Homebrew cask. Runs the app's own binary in Node mode.
+set -e
+
+# Resolve symlinks (Homebrew links this file into its bin directory).
+self="$0"
+while [ -L "$self" ]; do
+  target="$(readlink "$self")"
+  case "$target" in
+    /*) self="$target" ;;
+    *) self="$(dirname "$self")/$target" ;;
+  esac
+done
+
+resources="$(cd "$(dirname "$self")/.." && pwd)"
+contents="$(dirname "$resources")"
+
+export ELECTRON_RUN_AS_NODE=1
+exec "$contents/MacOS/Bigtable Desktop" "$resources/app.asar/src/mcp/stdio.js" "$@"

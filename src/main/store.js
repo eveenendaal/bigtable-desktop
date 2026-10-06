@@ -19,13 +19,14 @@ export class StateStore {
     this.file = file;
   }
 
-  load() {
+  /** @param {{backupCorrupt?: boolean}} [options] backupCorrupt=false for read-only readers such as the MCP server. */
+  load({ backupCorrupt = true } = {}) {
     try {
       const raw = fs.readFileSync(this.file, 'utf8');
       const parsed = JSON.parse(raw);
       return { ...defaultState(), ...parsed, settings: { ...defaultState().settings, ...parsed.settings } };
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if (backupCorrupt && err.code !== 'ENOENT') {
         // Keep a copy of an unreadable file instead of silently discarding the user's queries.
         try {
           fs.copyFileSync(this.file, `${this.file}.corrupt-${Date.now()}`);

@@ -25,6 +25,9 @@ cask "bigtable-desktop" do
     run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/Bigtable Desktop.app"]
   end
 
+  # Quits the app during `brew upgrade`; Homebrew reopens it once the new version is installed.
+  uninstall quit: "com.eveenendaal.bigtable-desktop"
+
   zap trash: [
     "~/Library/Application Support/Bigtable Desktop",
     "~/Library/Logs/Bigtable Desktop",

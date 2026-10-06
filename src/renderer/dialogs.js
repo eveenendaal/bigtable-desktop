@@ -1,5 +1,5 @@
 // Modal dialogs built on <dialog>.
-import { h, clear, formatError } from './dom.js';
+import { h, clear, formatError, icon, toast } from './dom.js';
 
 function openDialog(build) {
   return new Promise((resolve) => {
@@ -144,4 +144,96 @@ export function discoverProjectsDialog(existingIds) {
         list.append(formatError(err));
       });
   });
+}
+
+function copyBlock(text, label) {
+  return h(
+    'div',
+    { class: 'copy-block' },
+    h('pre', { class: 'code' }, text),
+    h(
+      'button',
+      { type: 'button', class: 'btn small', onClick: () => window.api.copyText(text).then(() => toast(`${label} copied`)) },
+      icon('copy', { size: 13 }),
+      ' Copy',
+    ),
+  );
+}
+
+/** Explains the built-in MCP server and registers it with Claude Code. */
+export function connectClaudeDialog() {
+  return openDialog((dialog, done) => {
+    dialog.classList.add('wide');
+    const status = h('div', { class: 'connect-status muted' }, h('span', { class: 'spinner' }), ' Looking for Claude Code…');
+    const commandSlot = h('div', {});
+    const jsonSlot = h('div', {});
+
+    dialog.append(
+      h('h2', {}, 'Connect to Claude Code'),
+      h(
+        'p',
+        { class: 'muted' },
+        'Bigtable Desktop includes an MCP server that gives Claude Code read-only access to your Bigtable data. It uses the same Google credentials, projects and saved queries as the app.',
+      ),
+      h(
+        'ul',
+        { class: 'connect-tools' },
+        h('li', {}, 'List projects, instances, clusters, tables and column families'),
+        h('li', {}, 'Read rows and full cell history, with JSON values and timestamps'),
+        h('li', {}, 'Run GoogleSQL, and run the queries saved in your tabs'),
+      ),
+      status,
+      h('h3', {}, 'Or run this in a terminal'),
+      commandSlot,
+      h('details', { class: 'connect-json' }, h('summary', {}, 'Configuration for other MCP clients (JSON)'), jsonSlot),
+      h('div', { class: 'dialog-actions' }, h('button', { type: 'button', class: 'btn', onClick: () => done(null) }, 'Done')),
+    );
+
+    window.api
+      .mcpConfig()
+      .then((info) => {
+        commandSlot.append(copyBlock(info.command, 'Command'));
+        jsonSlot.append(copyBlock(info.json, 'Configuration'));
+        clear(status);
+        if (!info.claudePath) {
+          status.append('The Claude Code CLI was not found on this computer. Install Claude Code, then run the command below.');
+          return;
+        }
+        const result = h('div', { class: 'connect-result' });
+        const button = h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn primary',
+            onClick: async () => {
+              button.disabled = true;
+              button.textContent = 'Adding…';
+              const res = await window.api.installMcp().catch((err) => ({ ok: false, message: err.message }));
+              button.disabled = false;
+              button.textContent = res.ok ? 'Added ✓' : 'Add to Claude Code';
+              replaceResult(result, res);
+            },
+          },
+          'Add to Claude Code',
+        );
+        status.classList.remove('muted');
+        status.append(
+          h('div', { class: 'connect-row' }, button, h('span', { class: 'muted small mono' }, info.claudePath)),
+          h('div', { class: 'muted small' }, 'Adds the server for all your projects (user scope). Running it again updates the registration.'),
+          result,
+        );
+      })
+      .catch((err) => {
+        clear(status);
+        status.append(formatError(err));
+      });
+  });
+}
+
+function replaceResult(el, res) {
+  clear(el);
+  el.className = ['connect-result', res.ok ? 'ok' : 'error'].join(' ');
+  el.append(
+    res.ok ? 'Added. Start a new Claude Code session and ask about your Bigtable data, or run /mcp to check the connection.' : res.message,
+  );
 }

@@ -1584,3 +1584,71 @@ body.sidebar-hidden .sidebar {
   color: var(--danger);
   white-space: pre-wrap;
 }
+
+/* ---------- Connect to Claude Code ---------- */
+
+.modal h3 {
+  font-size: 13px;
+  margin: 16px 0 6px;
+}
+
+.connect-tools {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: var(--text-soft);
+}
+
+.connect-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+
+.connect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connect-result.ok {
+  color: var(--ok);
+}
+
+.connect-result.error {
+  color: var(--danger);
+  white-space: pre-wrap;
+}
+
+.copy-block {
+  position: relative;
+}
+
+.copy-block pre {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 70px 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+  user-select: text;
+}
+
+.copy-block .btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.connect-json {
+  margin-top: 14px;
+}
+
+.connect-json summary {
+  cursor: pointer;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}

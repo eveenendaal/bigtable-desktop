@@ -1,7 +1,7 @@
 {
   "name": "bigtable-desktop",
   "productName": "Bigtable Desktop",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Desktop client for querying and browsing Google Cloud Bigtable",
   "author": "eveenendaal",
   "homepage": "https://github.com/eveenendaal/bigtable-desktop",
@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@google-cloud/bigtable": "^7.3.0",
-    "@google-cloud/resource-manager": "^7.1.1"
+    "@google-cloud/resource-manager": "^7.1.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "electron": "^44.5.1",
@@ -43,7 +45,13 @@
       ],
       "identity": "-",
       "hardenedRuntime": false,
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "extraResources": [
+        {
+          "from": "bin/bigtable-desktop-mcp",
+          "to": "bin/bigtable-desktop-mcp"
+        }
+      ]
     },
     "dmg": {
       "title": "Bigtable Desktop ${version}"

@@ -63,6 +63,7 @@ const ICONS = {
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
   row: '<rect x="3" y="9" width="18" height="6" rx="1"/>',
+  plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5"/>',
 };
 
 export function icon(name, { size = 16, className = '' } = {}) {
