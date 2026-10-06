@@ -18,6 +18,8 @@ cask "bigtable-desktop" do
   depends_on macos: :monterey
 
   app "Bigtable Desktop.app"
+  # Starts the built-in MCP server: `claude mcp add bigtable-desktop --scope user -- bigtable-desktop-mcp`
+  binary "#{appdir}/Bigtable Desktop.app/Contents/Resources/bin/bigtable-desktop-mcp"
 
   # The app is ad-hoc signed, not notarized. Clear the quarantine flag so
   # Gatekeeper does not refuse to open it.
