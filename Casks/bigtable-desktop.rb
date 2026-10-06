@@ -1,9 +1,9 @@
 cask "bigtable-desktop" do
   arch arm: "arm64", intel: "x64"
 
-  version "0.3.0"
-  sha256 arm:   "791c79a85aafbfa7a357694907afea0591b0136072443415c5592de95a2cc5a2",
-         intel: "4dac1bf51c28e34a55c69457f176be8e314ebf9ddc55827893b9c07ef4514e9d"
+  version "0.3.1"
+  sha256 arm:   "6001793bd5a6f65fdbe0da03ad4bc5d923b5c0b61822504c884531c11e80ed0f",
+         intel: "7dec1f396515d92b7330991fd6974b997a7ede425b3d80c10711259f27ff89a3"
 
   url "https://github.com/eveenendaal/bigtable-desktop/releases/download/v#{version}/bigtable-desktop-#{version}-#{arch}.dmg"
   name "Bigtable Desktop"
