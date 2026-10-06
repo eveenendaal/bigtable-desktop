@@ -15,15 +15,14 @@ cask "bigtable-desktop" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "Bigtable Desktop.app"
 
   # The app is ad-hoc signed, not notarized. Clear the quarantine flag so
   # Gatekeeper does not refuse to open it.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Bigtable Desktop.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/Bigtable Desktop.app"]
   end
 
   zap trash: [

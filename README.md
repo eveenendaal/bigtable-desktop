@@ -71,6 +71,20 @@ Arrow keys move between cells in the results grid. Option-click (Alt-click) a ta
 
 ## Development
 
+The Makefile wraps the common tasks; run `make` to list them:
+
+```sh
+make start          # install dependencies if needed and run the app
+make test           # unit tests
+make test-emulator  # all tests, starting a local Bigtable emulator if none is running
+make demo           # emulator + sample data + app
+make install-mac    # build for this Mac and copy it to /Applications
+```
+
+The emulator targets use `cbtemulator` from `gcloud components install bigtable` if it is installed. Otherwise they install the emulator with `go install`.
+
+Or use npm directly:
+
 ```sh
 npm install
 npm start

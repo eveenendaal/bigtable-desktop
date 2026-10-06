@@ -4,6 +4,8 @@ Bigtable Desktop is an Electron app for reading Google Cloud Bigtable data with 
 
 ## Commands
 
+`make help` lists Makefile shortcuts for the commands below. `make test-emulator` and `make demo` start an emulator via `scripts/with-emulator.sh` if none is running.
+
 ```sh
 npm install                                    # also downloads the Electron binary
 npm start                                      # run the app from source
