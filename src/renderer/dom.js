@@ -77,6 +77,41 @@ export function iconButton(name, title, onClick, extra = {}) {
   return h('button', { type: 'button', class: ['icon-btn', extra.class], title, 'aria-label': title, onClick, disabled: extra.disabled }, icon(name, { size: extra.size || 15 }));
 }
 
+/**
+ * Lets `handle` resize `panel` by dragging. The width is kept in the CSS variable `cssVar` on the root,
+ * so every element using it follows. `side` is where the panel sits relative to the handle.
+ * Double-clicking resets to the stylesheet default. `onEnd` gets the new width, or null after a reset.
+ */
+export function installResizer(handle, { panel, cssVar, side, min, max, onEnd }) {
+  const root = document.documentElement.style;
+  handle.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    const startX = event.clientX;
+    const startWidth = panel.getBoundingClientRect().width;
+    document.body.classList.add('resizing');
+    const move = (e) => {
+      const delta = side === 'left' ? e.clientX - startX : startX - e.clientX;
+      root.setProperty(cssVar, `${Math.round(Math.min(Math.max(startWidth + delta, min), max()))}px`);
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      document.body.classList.remove('resizing');
+      onEnd(root.getPropertyValue(cssVar).trim() || null);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  });
+  handle.addEventListener('dblclick', () => {
+    root.removeProperty(cssVar);
+    onEnd(null);
+  });
+}
+
 let toastHost;
 export function toast(message, { kind = 'info', timeout = 3500, action } = {}) {
   if (!toastHost) {

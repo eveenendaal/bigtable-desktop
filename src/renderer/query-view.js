@@ -1,5 +1,5 @@
 // One query tab: query editor, results grid and inspector.
-import { h, icon, iconButton, replaceChildren, toast, popupMenu, formatError } from './dom.js';
+import { h, icon, iconButton, replaceChildren, toast, popupMenu, formatError, installResizer } from './dom.js';
 import { rowsRequestFromForm, describeSavedQuery, mcpReferenceText } from '../shared/query.js';
 import { toJSON, toNDJSON, toCSV, rowToPlain } from '../shared/export.js';
 import { workspace, persist, flush, findProject, connFor, defaultSql } from './state.js';
@@ -53,8 +53,18 @@ export class QueryView {
       saveText,
     });
 
-    const resizer = h('div', { class: 'inspector-resizer', title: 'Drag to resize' });
-    this.installResizer(resizer);
+    const resizer = h('div', { class: 'inspector-resizer', title: 'Drag to resize, double-click to reset' });
+    installResizer(resizer, {
+      panel: this.inspectorEl,
+      cssVar: '--inspector-width',
+      side: 'right',
+      min: 280,
+      max: () => window.innerWidth * 0.7,
+      onEnd: (width) => {
+        workspace.settings.inspectorWidth = width;
+        persist();
+      },
+    });
 
     this.el.append(
       this.editorEl,
@@ -77,26 +87,6 @@ export class QueryView {
     // Projects removed from the sidebar keep working for their open tabs.
     const [projectId, emulatorHost] = (this.tab.projectKey || '').split('@');
     return { projectId, emulatorHost: emulatorHost || undefined };
-  }
-
-  installResizer(handle) {
-    handle.addEventListener('pointerdown', (event) => {
-      handle.setPointerCapture(event.pointerId);
-      const startX = event.clientX;
-      const startWidth = this.inspectorEl.getBoundingClientRect().width;
-      const move = (e) => {
-        const width = Math.min(Math.max(startWidth + (startX - e.clientX), 280), window.innerWidth * 0.7);
-        document.documentElement.style.setProperty('--inspector-width', `${width}px`);
-      };
-      const up = () => {
-        handle.removeEventListener('pointermove', move);
-        handle.removeEventListener('pointerup', up);
-        workspace.settings.inspectorWidth = getComputedStyle(document.documentElement).getPropertyValue('--inspector-width').trim();
-        persist();
-      };
-      handle.addEventListener('pointermove', move);
-      handle.addEventListener('pointerup', up);
-    });
   }
 
   async loadFamilies() {

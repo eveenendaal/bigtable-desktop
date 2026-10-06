@@ -1,5 +1,5 @@
 // Renderer entry point: layout, tab management and app commands.
-import { h, icon, iconButton, replaceChildren, toast, popupMenu } from './dom.js';
+import { h, icon, iconButton, replaceChildren, toast, popupMenu, installResizer } from './dom.js';
 import { workspace, loadWorkspace, persist, createTab, tabTitle, activeTab, findProject, addProject, defaultSql } from './state.js';
 import { initSidebar, renderTree, promptAddProject, discoverProjects, updateTimeZoneToggle, revealTable } from './sidebar.js';
 import { QueryView } from './query-view.js';
@@ -271,6 +271,7 @@ async function main() {
   document.body.classList.add(`platform-${window.api.platform}`);
   document.body.classList.toggle('sidebar-hidden', Boolean(workspace.settings.sidebarHidden));
   if (workspace.settings.inspectorWidth) document.documentElement.style.setProperty('--inspector-width', workspace.settings.inspectorWidth);
+  if (workspace.settings.sidebarWidth) document.documentElement.style.setProperty('--sidebar-width', workspace.settings.sidebarWidth);
 
   // Tabs restored from a previous session keep their project even if it was removed.
   for (const tab of workspace.tabs) {
@@ -282,11 +283,24 @@ async function main() {
   }
 
   const sidebarEl = h('aside', { class: 'sidebar' });
+  const sidebarResizer = h('div', { class: 'sidebar-resizer', title: 'Drag to resize, double-click to reset' });
+  installResizer(sidebarResizer, {
+    panel: sidebarEl,
+    cssVar: '--sidebar-width',
+    side: 'left',
+    min: 180,
+    max: () => Math.max(180, window.innerWidth * 0.5),
+    onEnd: (width) => {
+      workspace.settings.sidebarWidth = width;
+      persist();
+    },
+  });
   tabbarEl = h('div', { class: 'tabbar' });
   contentEl = h('div', { class: 'content' });
   replaceChildren(
     document.getElementById('app'),
     sidebarEl,
+    sidebarResizer,
     h('main', { class: 'workspace' }, h('div', { class: 'tabbar-row' }, iconButton('sidebar', 'Toggle sidebar (⌘B)', toggleSidebar, { class: 'sidebar-toggle' }), tabbarEl), contentEl),
   );
   initSidebar(sidebarEl, { openTable, setTimeZone });

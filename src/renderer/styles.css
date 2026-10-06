@@ -332,8 +332,29 @@ textarea:focus {
   min-height: 0;
 }
 
-body.sidebar-hidden .sidebar {
+body.sidebar-hidden .sidebar,
+body.sidebar-hidden .sidebar-resizer {
   display: none;
+}
+
+/* Straddles the sidebar's border; no-drag so the title-bar drag regions don't swallow it. */
+.sidebar-resizer {
+  flex: none;
+  width: 6px;
+  margin: 0 -3px;
+  cursor: col-resize;
+  z-index: 4;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-resizer:hover {
+  background: var(--accent-soft);
+}
+
+/* Keeps the col-resize cursor and stops text selection while dragging a resizer. */
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .sidebar-header {
