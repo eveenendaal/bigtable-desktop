@@ -156,6 +156,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Packaged builds get their icon from the bundle; show it in the Dock during development too.
+  if (isMac && !app.isPackaged) app.dock.setIcon(path.join(srcRoot, '..', 'build', 'icon.png'));
   store = new StateStore(process.env.BIGTABLE_DESKTOP_STATE || path.join(app.getPath('userData'), 'workspace.json'));
   serveAppProtocol();
   registerIpc();

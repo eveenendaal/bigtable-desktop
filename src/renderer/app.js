@@ -37,7 +37,7 @@ function renderContent() {
       empty = h(
         'div',
         { class: 'no-tabs' },
-        icon('table', { size: 40 }),
+        h('img', { class: 'app-icon', src: 'assets/icon.svg', alt: '', width: 112, height: 112 }),
         h('h2', {}, 'Bigtable Desktop'),
         h('p', { class: 'muted' }, 'Choose a table in the sidebar to open a query tab. Tabs and their queries are saved between sessions.'),
         h('button', { type: 'button', class: 'btn primary', onClick: () => newTab() }, 'New query tab'),

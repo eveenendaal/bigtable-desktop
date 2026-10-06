@@ -642,6 +642,10 @@ body.sidebar-hidden .sidebar {
   padding: 40px;
 }
 
+.no-tabs .app-icon {
+  margin-bottom: -4px;
+}
+
 .no-tabs {
   height: 100%;
 }

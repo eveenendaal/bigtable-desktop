@@ -14,6 +14,7 @@ BIGTABLE_EMULATOR_HOST=localhost:8086 npm test # also runs test/emulator.test.js
 npm run seed:emulator                          # load sample data into demo-project/demo-instance
 npx electron-builder --linux dir --publish never  # quick packaged build in dist/linux-unpacked
 ruby -c Casks/bigtable-desktop.rb              # cask syntax check (run by CI)
+make icons                                     # regenerate build/icon.png + icon.icns from build/icon.svg
 ```
 
 Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or `go install cloud.google.com/go/bigtable/cmd/emulator@latest` and run `emulator -host localhost -port 8086`. The emulator cannot list instances or clusters and does not support GoogleSQL (`PrepareQuery`), so those features can't be tested against it.
@@ -63,6 +64,7 @@ Emulator: `gcloud beta emulators bigtable start --host-port=localhost:8086`, or 
 - Pass `metricsEnabled: false` to the `Bigtable` constructor. Otherwise the client tries to export metrics to Cloud Monitoring.
 - `fast-crc32c` has an optional native `sse4_crc32` addon. The package config excludes it and sets `npmRebuild: false` so the app stays pure JS and macOS arm64/x64 builds cross-build cleanly. Don't add native dependencies.
 - Keep CSS class names distinct between components. A shared `.versions` class once broke the grid's row heights.
+- The app icon's source is `build/icon.svg`. `build/icon.png`, `build/icon.icns` and `src/renderer/assets/icon.svg` are generated from it with `make icons`, so edit the SVG and regenerate rather than editing those files.
 - Pagination ("Load more") restarts strictly after `lastKey`. Prefix scans are turned into ranges using `prefixSuccessor`.
 
 ## Conventions

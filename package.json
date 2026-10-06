@@ -1,7 +1,7 @@
 {
   "name": "bigtable-desktop",
   "productName": "Bigtable Desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Desktop client for querying and browsing Google Cloud Bigtable",
   "author": "eveenendaal",
   "homepage": "https://github.com/eveenendaal/bigtable-desktop",
@@ -42,7 +42,8 @@
         "zip"
       ],
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "icon": "build/icon.icns"
     },
     "dmg": {
       "title": "Bigtable Desktop ${version}"
@@ -53,12 +54,14 @@
         "deb"
       ],
       "category": "Development",
-      "maintainer": "eveenendaal"
+      "maintainer": "eveenendaal",
+      "icon": "build/icon.png"
     },
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "build/icon.png"
     },
     "publish": null
   }

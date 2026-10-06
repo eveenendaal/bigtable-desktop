@@ -1,3 +1,5 @@
+<img src="build/icon.png" width="128" alt="Bigtable Desktop icon">
+
 # Bigtable Desktop
 
 A desktop app for **reading and exploring Google Cloud Bigtable data**. It is built with Electron and the official [`@google-cloud/bigtable`](https://www.npmjs.com/package/@google-cloud/bigtable) Node.js client. It is meant for using Bigtable, not administering it: it lists projects, instances, clusters and tables, but it never creates, changes or deletes anything.

@@ -7,7 +7,7 @@ MAC_ARCH := $(shell uname -m | sed 's/x86_64/x64/')
 MAC_APP_DIR := dist/mac$(if $(filter arm64,$(MAC_ARCH)),-arm64,)
 
 .DEFAULT_GOAL := help
-.PHONY: help install start test test-emulator emulator seed demo dist package-mac install-mac clean
+.PHONY: help install start test test-emulator emulator seed demo icons dist package-mac install-mac clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,10 @@ seed: node_modules ## Load sample data into a running emulator
 demo: node_modules ## Start an emulator, load sample data and run the app
 	@echo "In the app, add project demo-project with emulator host localhost:$(EMULATOR_PORT), then instance demo-instance."
 	$(WITH_EMULATOR) sh -c 'npm run seed:emulator && npm start'
+
+icons: node_modules ## Regenerate app icons from build/icon.svg
+	npx electron scripts/build-icons.js
+	cp build/icon.svg src/renderer/assets/icon.svg
 
 dist: node_modules ## Build installers for the current platform into dist/
 	npx electron-builder --publish never
