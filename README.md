@@ -121,7 +121,7 @@ The workspace is saved to `workspace.json` in the app's user-data directory (`~/
    - or bump `version` in `package.json`, then run the **Release** workflow manually from the Actions tab. It creates the `v<version>` tag itself.
 
 2. The **Release** workflow then:
-   - builds macOS (arm64 and x64 DMG/ZIP), Linux (AppImage/deb) and Windows (NSIS) installers;
+   - builds the macOS installers (arm64 and x64 DMG/ZIP). Linux and Windows builds are commented out in the workflow for now;
    - publishes them to a GitHub release;
    - commits the new version and SHA-256 checksums to `Casks/bigtable-desktop.rb` on the default branch.
 
