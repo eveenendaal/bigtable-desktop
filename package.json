@@ -18,13 +18,13 @@
     "dist:win": "electron-builder --win"
   },
   "dependencies": {
-    "@google-cloud/bigtable": "^7.3.0",
+    "@google-cloud/bigtable": "^7.4.0",
     "@google-cloud/resource-manager": "^7.1.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "electron": "^44.5.1",
+    "electron": "^44.7.0",
     "electron-builder": "^26.15.3"
   },
   "build": {
