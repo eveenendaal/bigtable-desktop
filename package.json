@@ -18,14 +18,14 @@
     "dist:win": "electron-builder --win"
   },
   "dependencies": {
-    "@google-cloud/bigtable": "^7.3.0",
-    "@google-cloud/resource-manager": "^7.1.1",
-    "@modelcontextprotocol/sdk": "^1.32.1",
-    "zod": "^4.6.5"
+    "@google-cloud/bigtable": "^7.5.0",
+    "@google-cloud/resource-manager": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "electron": "^44.5.1",
-    "electron-builder": "^26.15.3"
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "com.eveenendaal.bigtable-desktop",
